@@ -8,8 +8,10 @@ import {
   TextInput,
   ScrollView,
   Image,
+  Alert,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Import logo
 import logo from './assets/images/Logo.png';
@@ -20,14 +22,52 @@ interface LoginScreenProps {
 }
 
 function LoginScreen({ onNavigateToRegister, onLoginSuccess }: LoginScreenProps): React.JSX.Element {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = () => {
-    // Hardcoded login logic - always redirect to home
-    console.log('Login successful');
-    onLoginSuccess();
+  const handleLogin = async () => {
+    if (!username || !password) {
+      Alert.alert('Error', 'Please fill in all required fields');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      console.log('Attempting login with:', { username, password: '***' });
+      
+      const response = await fetch('http://192.168.1.16:8000/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      console.log('Response status:', response.status);
+      const data = await response.json();
+      console.log('Response data:', data);
+
+      if (response.ok) {
+        // Save user data to AsyncStorage
+        await AsyncStorage.setItem('token', data.token);
+        await AsyncStorage.setItem('user', JSON.stringify(data.user));
+        await AsyncStorage.setItem('screens', JSON.stringify(data.user.screens));
+        
+        console.log('Login successful, saved screens:', data.user.screens);
+        onLoginSuccess();
+      } else {
+        console.log('Login failed:', data.error);
+        Alert.alert('Login Failed', data.error || 'Invalid credentials');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      Alert.alert('Error', `Network error: ${errorMessage}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -46,28 +86,24 @@ function LoginScreen({ onNavigateToRegister, onLoginSuccess }: LoginScreenProps)
           <Image source={logo} style={styles.logo} />
         </View>
 
-        {/* Title */}
-        {/* <Text style={styles.title}>Login</Text> */}
+        {/* Demo credentials info */}
+        <View style={styles.demoInfo}>
+          <Text style={styles.demoTitle}>Demo Credentials:</Text>
+          <Text style={styles.demoText}>• Super Admin: admin / admin123 (All screens)</Text>
+          <Text style={styles.demoText}>• Manager: manager / manager123 (Limited access)</Text>
+          <Text style={styles.demoText}>• Executive: executive / exec123 (Basic access)</Text>
+        </View>
 
         {/* Input Fields */}
         <View style={styles.inputContainer}>
           <View style={styles.inputField}>
             <TextInput
               style={styles.input}
-              placeholder="Name"
-              value={name}
-              onChangeText={setName}
+              placeholder="Username"
+              value={username}
+              onChangeText={setUsername}
               placeholderTextColor="#999"
-            />
-          </View>
-          <View style={styles.inputField}>
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              value={email}
-              onChangeText={setEmail}
-              placeholderTextColor="#999"
-              keyboardType="email-address"
+              autoCapitalize="none"
             />
           </View>
           <View style={styles.inputField}>
@@ -88,8 +124,14 @@ function LoginScreen({ onNavigateToRegister, onLoginSuccess }: LoginScreenProps)
         </TouchableOpacity>
 
         {/* Login Button */}
-        <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-          <Text style={styles.loginButtonText}>Log In</Text>
+        <TouchableOpacity 
+          style={[styles.loginButton, isLoading && styles.loginButtonDisabled]} 
+          onPress={handleLogin}
+          disabled={isLoading}
+        >
+          <Text style={styles.loginButtonText}>
+            {isLoading ? 'Logging in...' : 'Log In'}
+          </Text>
         </TouchableOpacity>
 
         {/* Register Link */}
@@ -154,7 +196,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#e0e0e0',
     transform: [{ rotate: '45deg' }],
   },
-
   illustrationContainer: {
     alignItems: 'center',
     marginVertical: 30,
@@ -165,6 +206,25 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     resizeMode: 'contain',
+  },
+  demoInfo: {
+    backgroundColor: '#f8f9fa',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FADB43',
+  },
+  demoTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    marginBottom: 8,
+  },
+  demoText: {
+    fontSize: 12,
+    color: '#7f8c8d',
+    marginBottom: 2,
   },
   title: {
     fontSize: 28,
@@ -206,6 +266,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     alignSelf: 'center',
     width: '80%',
+  },
+  loginButtonDisabled: {
+    backgroundColor: '#bdc3c7',
   },
   loginButtonText: {
     color: '#ffffff',

@@ -15,6 +15,7 @@ import {
 // Install with: npm install react-native-vector-icons
 // Then link fonts: npx react-native link react-native-vector-icons
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Import screens
 import LoginScreen from './LoginScreen';
@@ -58,6 +59,8 @@ function App(): React.JSX.Element {
   const [currentScreen, setCurrentScreen] = useState<Screen>('splash');
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'chat' | 'settings'>('home');
   const [iconsLoaded, setIconsLoaded] = useState(false);
+  const [allowedScreens, setAllowedScreens] = useState<string[]>([]);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     // Check if icons are working
@@ -71,17 +74,48 @@ function App(): React.JSX.Element {
     }
   }, []);
 
-  const menuOptions = [
-    // { id: 1, title: 'Tile', icon: '🔲', description: 'Manage tiles and layouts' },
-    { id: 2, title: 'Leads', icon: '🧍', description: 'Track potential leads' },
-    { id: 3, title: 'Site Visits', icon: '📅', description: 'Schedule and manage visits' },
-    { id: 4, title: 'Properties', icon: '🏠', description: 'Manage property listings' },
-    { id: 5, title: 'Bookings', icon: '📦', description: 'Handle booking requests' },
-    { id: 6, title: 'Payments', icon: '🧾', description: 'Track payments and invoices' },
-    { id: 7, title: 'Chats / Enquiries', icon: '💬', description: 'Manage customer inquiries' },
-    { id: 8, title: 'Site Staff', icon: '👷', description: 'Manage on-site personnel' },
-    { id: 9, title: 'Reports', icon: '📈', description: 'View analytics and reports' },
+  // Load user data and allowed screens when main screen is shown
+  useEffect(() => {
+    if (currentScreen === 'main') {
+      loadUserData();
+    }
+  }, [currentScreen]);
+
+  const loadUserData = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('user');
+      const screensData = await AsyncStorage.getItem('screens');
+      
+      if (userData) {
+        setUser(JSON.parse(userData));
+      }
+      
+      if (screensData) {
+        setAllowedScreens(JSON.parse(screensData));
+        console.log('Loaded allowed screens:', JSON.parse(screensData));
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
+  };
+
+  // Define all available menu options
+  const allMenuOptions = [
+    { id: 1, title: 'Dashboard', key: 'Dashboard', icon: '📊', description: 'View dashboard and analytics' },
+    { id: 2, title: 'Leads', key: 'Leads', icon: '🧍', description: 'Track potential leads' },
+    { id: 3, title: 'Site Visits', key: 'SiteVisits', icon: '📅', description: 'Schedule and manage visits' },
+    { id: 4, title: 'Properties', key: 'Properties', icon: '🏠', description: 'Manage property listings' },
+    { id: 5, title: 'Bookings', key: 'Bookings', icon: '📦', description: 'Handle booking requests' },
+    { id: 6, title: 'Payments', key: 'Payments', icon: '🧾', description: 'Track payments and invoices' },
+    { id: 7, title: 'Chats / Enquiries', key: 'Chat', icon: '💬', description: 'Manage customer inquiries' },
+    { id: 8, title: 'Site Staff', key: 'SiteStaff', icon: '👷', description: 'Manage on-site personnel' },
+    { id: 9, title: 'Reports', key: 'Reports', icon: '📈', description: 'View analytics and reports' },
   ];
+
+  // Filter menu options based on allowed screens
+  const menuOptions = allMenuOptions.filter(option => 
+    allowedScreens.includes(option.key)
+  );
 
   // Ionicons names: 'home-outline', 'search-outline', 'person-outline' and filled variants
   const bottomTabs = [
@@ -130,10 +164,31 @@ function App(): React.JSX.Element {
     setCurrentScreen('register');
   };
 
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('user');
+      await AsyncStorage.removeItem('screens');
+      setAllowedScreens([]);
+      setUser(null);
+      setCurrentScreen('login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
   const renderContent = () => {
     if (activeTab === 'home') {
       return (
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* User info header */}
+          {user && (
+            <View style={styles.userInfo}>
+              <Text style={styles.welcomeText}>Welcome, {user.name}!</Text>
+              <Text style={styles.roleText}>Role: {user.role}</Text>
+            </View>
+          )}
+          
           <View style={styles.menuGrid}>
             {menuOptions.map(o => (
               <TouchableOpacity
@@ -245,7 +300,7 @@ function App(): React.JSX.Element {
                 <Text style={[styles.fallbackIcon, { color: '#2c3e50' }]}>🔔</Text>
               )}
             </TouchableOpacity>
-            <TouchableOpacity style={styles.headerIcon} onPress={() => setCurrentScreen('register')}>
+            <TouchableOpacity style={styles.headerIcon} onPress={handleLogout}>
               {iconsLoaded ? (
                 <Ionicons name="log-out-outline" size={24} color="#2c3e50" />
               ) : (
@@ -326,6 +381,27 @@ const styles = StyleSheet.create({
     flex: 1, 
     padding: scale(20),
     width: '100%',
+  },
+  userInfo: {
+    backgroundColor: '#ffffff',
+    padding: scale(15),
+    borderRadius: scale(10),
+    marginBottom: scale(15),
+    elevation: Platform.OS === 'android' ? 2 : 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  welcomeText: {
+    fontSize: scale(18),
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    marginBottom: scale(5),
+  },
+  roleText: {
+    fontSize: scale(14),
+    color: '#7f8c8d',
   },
   menuGrid: { 
     flexDirection: 'row', 
