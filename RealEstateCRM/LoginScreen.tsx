@@ -37,7 +37,7 @@ function LoginScreen({ onNavigateToRegister, onLoginSuccess }: LoginScreenProps)
     try {
       console.log('Attempting login with:', { username, password: '***' });
       
-      const response = await fetch('http://192.168.1.16:8000/auth/login', {
+      const response = await fetch('http://10.0.2.2:8000/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
