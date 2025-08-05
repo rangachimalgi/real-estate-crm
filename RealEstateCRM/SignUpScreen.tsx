@@ -8,8 +8,11 @@ import {
   TextInput,
   ScrollView,
   Image,
+  Alert,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { buildApiUrl, API_CONFIG } from './config/api';
 
 // Import logo
 import logo from './assets/images/Logo.png';
@@ -25,17 +28,59 @@ function SignUpScreen({ onNavigateToLogin, onSignUpSuccess }: SignUpScreenProps)
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  const handleSignUp = () => {
-    // Hardcoded sign up logic
-    if (name && email && password && confirmPassword) {
-      if (password === confirmPassword) {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSignUp = async () => {
+    if (!name || !email || !password || !confirmPassword) {
+      Alert.alert('Error', 'Please fill in all required fields');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      console.log('Attempting sign up with:', { name, email, password: '***' });
+      
+      const response = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.REGISTER), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          name, 
+          email, 
+          password,
+          username: email // Using email as username for now
+        }),
+      });
+
+      console.log('Response status:', response.status);
+      const data = await response.json();
+      console.log('Response data:', data);
+
+      if (response.ok) {
+        // Save user data to AsyncStorage
+        await AsyncStorage.setItem('token', data.token);
+        await AsyncStorage.setItem('user', JSON.stringify(data.user));
+        await AsyncStorage.setItem('screens', JSON.stringify(data.user.screens || []));
+        
         console.log('Sign up successful');
         onSignUpSuccess();
       } else {
-        console.log('Passwords do not match');
+        console.log('Sign up failed:', data.error);
+        Alert.alert('Sign Up Failed', data.error || 'Registration failed');
       }
-    } else {
-      console.log('Please fill all fields');
+    } catch (error) {
+      console.error('Sign up error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      Alert.alert('Error', `Network error: ${errorMessage}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -102,8 +147,14 @@ function SignUpScreen({ onNavigateToLogin, onSignUpSuccess }: SignUpScreenProps)
         </View>
 
         {/* Sign Up Button */}
-        <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp}>
-          <Text style={styles.signUpButtonText}>Sign Up</Text>
+        <TouchableOpacity 
+          style={[styles.signUpButton, isLoading && styles.disabledButton]} 
+          onPress={handleSignUp}
+          disabled={isLoading}
+        >
+          <Text style={styles.signUpButtonText}>
+            {isLoading ? 'Signing Up...' : 'Sign Up'}
+          </Text>
         </TouchableOpacity>
 
         {/* Login Link */}
@@ -216,6 +267,9 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
   loginContainer: {
     flexDirection: 'row',
