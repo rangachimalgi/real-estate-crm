@@ -2,6 +2,8 @@ import express from 'express';
 import dotenv from 'dotenv';
 import connectDB from './config/db.js';
 import authRoutes from "./routes/auth.js"
+import rolesRoutes from "./routes/roles.js"
+import usersRoutes from "./routes/users.js"
 import './models/Role.js';
 
 dotenv.config();
@@ -28,6 +30,8 @@ connectDB();
 
 // Routes
 app.use('/auth', authRoutes);
+app.use('/roles', rolesRoutes);
+app.use('/users', usersRoutes);
 
 // Health check
 app.get('/', (req, res) => {

@@ -1,135 +1,69 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import './App.css'
+import LoginScreen from './components/LoginScreen'
+import Dashboard from './components/Dashboard'
+import RolesList from './components/RolesList'
+import CreateRole from './components/CreateRole'
+import EditRole from './components/EditRole'
+import CreateUser from './components/CreateUser'
+import UsersList from './components/UsersList'
 
 function App() {
-  const [formData, setFormData] = useState({
-    username: '',
-    password: ''
-  })
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [user, setUser] = useState(null)
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-    // Clear error when user starts typing
-    if (error) setError('')
+  useEffect(() => {
+    // Check if user is already logged in
+    const token = localStorage.getItem('adminToken')
+    const userData = localStorage.getItem('adminUser')
+    
+    if (token && userData) {
+      try {
+        const parsedUser = JSON.parse(userData)
+        if (parsedUser.role === 'superadmin') {
+          setIsAuthenticated(true)
+          setUser(parsedUser)
+        }
+      } catch (error) {
+        console.error('Error parsing user data:', error)
+        localStorage.removeItem('adminToken')
+        localStorage.removeItem('adminUser')
+      }
+    }
+  }, [])
+
+  const handleLogin = (userData) => {
+    setIsAuthenticated(true)
+    setUser(userData)
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError('')
-    
-    try {
-      const response = await fetch('http://localhost:8000/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: formData.username,
-          password: formData.password
-        })
-      })
+  const handleLogout = () => {
+    localStorage.removeItem('adminToken')
+    localStorage.removeItem('adminUser')
+    setIsAuthenticated(false)
+    setUser(null)
+  }
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed')
-      }
-
-      // Check if user is super admin
-      if (data.user.role !== 'superadmin') {
-        throw new Error('Access denied. Only super admin can access this panel.')
-      }
-
-      // Store token and user data
-      localStorage.setItem('adminToken', data.token)
-      localStorage.setItem('adminUser', JSON.stringify(data.user))
-      
-      // Show success message
-      alert('Login successful! Welcome Super Admin.')
-      console.log('Login successful:', data.user)
-      
-      // Here you would typically redirect to the admin dashboard
-      // For now, we'll just show the success message
-      
-    } catch (error) {
-      console.error('Login error:', error)
-      setError(error.message || 'Login failed. Please try again.')
-    } finally {
-      setIsLoading(false)
-    }
+  if (!isAuthenticated) {
+    return <LoginScreen onLogin={handleLogin} />
   }
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <div className="login-header">
-          <h1>Admin Panel</h1>
-          <p>Super Admin Access Only</p>
-        </div>
-        
-        {error && (
-          <div className="error-message">
-            {error}
-          </div>
-        )}
-        
-        <form onSubmit={handleSubmit} className="login-form">
-          <div className="form-group">
-            <label htmlFor="username">Username</label>
-            <input
-              type="text"
-              id="username"
-              name="username"
-              value={formData.username}
-              onChange={handleInputChange}
-              placeholder="Enter your username"
-              required
-            />
-          </div>
-          
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleInputChange}
-              placeholder="Enter your password"
-              required
-            />
-          </div>
-          
-          <div className="form-options">
-            <label className="checkbox-container">
-              <input type="checkbox" />
-              <span className="checkmark"></span>
-              Remember me
-            </label>
-            <a href="#" className="forgot-password">Forgot password?</a>
-          </div>
-          
-          <button 
-            type="submit" 
-            className={`login-button ${isLoading ? 'loading' : ''}`}
-            disabled={isLoading}
-          >
-            {isLoading ? 'Signing in...' : 'Sign In'}
-          </button>
-        </form>
-        
-        <div className="login-footer">
-          <p>Super Admin credentials: admin / admin123</p>
-        </div>
+    <Router>
+      <div className="app">
+        <Dashboard user={user} onLogout={handleLogout}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/roles" replace />} />
+            <Route path="/roles" element={<RolesList />} />
+            <Route path="/roles/create" element={<CreateRole />} />
+            <Route path="/roles/:id/edit" element={<EditRole />} />
+            <Route path="/users" element={<UsersList />} />
+            <Route path="/users/create" element={<CreateUser />} />
+          </Routes>
+        </Dashboard>
       </div>
-    </div>
+    </Router>
   )
 }
 
