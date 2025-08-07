@@ -6,9 +6,12 @@ export const API_CONFIG = {
   // Development backend URL (for local testing)
   DEV_BASE_URL: 'http://10.0.2.2:8000',
   
-  // Use production by default, change to DEV_BASE_URL for local development
+  // Current API base URL (can be changed dynamically)
+  currentBaseUrl: 'https://real-estate-crm-backend-yfxi.onrender.com',
+  
+  // Get current API base URL
   get API_BASE_URL() {
-    return this.BASE_URL;
+    return this.currentBaseUrl;
   },
   
   // API endpoints
@@ -44,5 +47,33 @@ export const apiRequest = async (
     },
   };
 
-  return fetch(url, config);
-}; 
+  // Add timeout for Render free tier cold starts
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+  try {
+    const response = await fetch(url, {
+      ...config,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+};
+
+// Easy toggle function to switch between environments
+export const switchToLocalhost = () => {
+  API_CONFIG.currentBaseUrl = API_CONFIG.DEV_BASE_URL;
+  console.log('🌐 Switched to localhost backend');
+};
+
+export const switchToProduction = () => {
+  API_CONFIG.currentBaseUrl = API_CONFIG.BASE_URL;
+  console.log('🌐 Switched to production backend');
+};
+
+// Initialize with production by default
+API_CONFIG.currentBaseUrl = API_CONFIG.BASE_URL; 

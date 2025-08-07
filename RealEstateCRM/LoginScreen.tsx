@@ -57,6 +57,7 @@ function LoginScreen({ onNavigateToRegister, onLoginSuccess }: LoginScreenProps)
         await AsyncStorage.setItem('screens', JSON.stringify(data.user.screens));
         
         console.log('Login successful, saved screens:', data.user.screens);
+        console.log('Full user data:', data.user);
         onLoginSuccess();
       } else {
         console.log('Login failed:', data.error);
@@ -64,8 +65,17 @@ function LoginScreen({ onNavigateToRegister, onLoginSuccess }: LoginScreenProps)
       }
     } catch (error) {
       console.error('Login error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      Alert.alert('Error', `Network error: ${errorMessage}`);
+      let errorMessage = 'Network error occurred';
+      
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          errorMessage = 'Server is taking too long to respond. Please try again.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      Alert.alert('Connection Error', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -131,7 +141,7 @@ function LoginScreen({ onNavigateToRegister, onLoginSuccess }: LoginScreenProps)
           disabled={isLoading}
         >
           <Text style={styles.loginButtonText}>
-            {isLoading ? 'Logging in...' : 'Log In'}
+            {isLoading ? 'Connecting to server...' : 'Log In'}
           </Text>
         </TouchableOpacity>
 

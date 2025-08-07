@@ -22,11 +22,12 @@ import LoginScreen from './LoginScreen';
 import RegisterScreen from './RegisterScreen';
 import SignUpScreen from './SignUpScreen';
 import SplashScreen from './SplashScreen';
+import DeskPanelScreen from './DeskPanelScreen';
 
 // Remove the loadFont call as it's not needed in newer versions
 // Ionicons.loadFont();
 
-type Screen = 'splash' | 'login' | 'register' | 'signup' | 'main';
+type Screen = 'splash' | 'login' | 'register' | 'signup' | 'main' | 'deskPanel';
 
 // Get screen dimensions
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -91,8 +92,11 @@ function App(): React.JSX.Element {
       }
       
       if (screensData) {
-        setAllowedScreens(JSON.parse(screensData));
-        console.log('Loaded allowed screens:', JSON.parse(screensData));
+        const screens = JSON.parse(screensData);
+        setAllowedScreens(screens);
+        console.log('Loaded allowed screens:', screens);
+        console.log('Available menu options:', allMenuOptions.map(o => o.key));
+        console.log('Filtered menu options:', allMenuOptions.filter(option => screens.includes(option.key)).map(o => o.title));
       }
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -110,6 +114,7 @@ function App(): React.JSX.Element {
     { id: 7, title: 'Chats / Enquiries', key: 'Chat', icon: '💬', description: 'Manage customer inquiries' },
     { id: 8, title: 'Site Staff', key: 'SiteStaff', icon: '👷', description: 'Manage on-site personnel' },
     { id: 9, title: 'Reports', key: 'Reports', icon: '📈', description: 'View analytics and reports' },
+    { id: 10, title: 'Desk Panel', key: 'DeskPanel', icon: '🖥️', description: 'Access desk management tools' },
   ];
 
   // Filter menu options based on allowed screens
@@ -127,7 +132,16 @@ function App(): React.JSX.Element {
 
   const handleMenuPress = (option: typeof menuOptions[number]) => {
     console.log(`Pressed: ${option.title}`);
-    // TODO: navigate
+    
+    // Handle navigation based on menu option
+    switch (option.key) {
+      case 'DeskPanel':
+        setCurrentScreen('deskPanel');
+        break;
+      default:
+        // TODO: navigate to other screens
+        console.log(`Navigation to ${option.key} not implemented yet`);
+    }
   };
 
   const handleTabPress = (tabId: typeof bottomTabs[number]['id']) => {
@@ -269,6 +283,14 @@ function App(): React.JSX.Element {
       <SignUpScreen
         onNavigateToLogin={handleNavigateToLogin}
         onSignUpSuccess={handleSignUpSuccess}
+      />
+    );
+  }
+
+  if (currentScreen === 'deskPanel') {
+    return (
+      <DeskPanelScreen
+        onNavigateBack={() => setCurrentScreen('main')}
       />
     );
   }
