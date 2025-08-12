@@ -23,11 +23,12 @@ import RegisterScreen from './RegisterScreen';
 import SignUpScreen from './SignUpScreen';
 import SplashScreen from './SplashScreen';
 import DeskPanelScreen from './DeskPanelScreen';
+import ProjectsScreen from './ProjectsScreen';
 
 // Remove the loadFont call as it's not needed in newer versions
 // Ionicons.loadFont();
 
-type Screen = 'splash' | 'login' | 'register' | 'signup' | 'main' | 'deskPanel';
+type Screen = 'splash' | 'login' | 'register' | 'signup' | 'main' | 'deskPanel' | 'projects';
 
 // Get screen dimensions
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -107,14 +108,11 @@ function App(): React.JSX.Element {
   const allMenuOptions = [
     { id: 1, title: 'Dashboard', key: 'Dashboard', icon: '📊', description: 'View dashboard and analytics' },
     { id: 2, title: 'Leads', key: 'Leads', icon: '🧍', description: 'Track potential leads' },
-    { id: 3, title: 'Site Visits', key: 'SiteVisits', icon: '📅', description: 'Schedule and manage visits' },
+    { id: 3, title: 'Projects', key: 'Projects', icon: '🏗️', description: 'View all projects' },
     { id: 4, title: 'Properties', key: 'Properties', icon: '🏠', description: 'Manage property listings' },
     { id: 5, title: 'Bookings', key: 'Bookings', icon: '📦', description: 'Handle booking requests' },
-    { id: 6, title: 'Payments', key: 'Payments', icon: '🧾', description: 'Track payments and invoices' },
-    { id: 7, title: 'Chats / Enquiries', key: 'Chat', icon: '💬', description: 'Manage customer inquiries' },
-    { id: 8, title: 'Site Staff', key: 'SiteStaff', icon: '👷', description: 'Manage on-site personnel' },
-    { id: 9, title: 'Reports', key: 'Reports', icon: '📈', description: 'View analytics and reports' },
-    { id: 10, title: 'Desk Panel', key: 'DeskPanel', icon: '🖥️', description: 'Access desk management tools' },
+    { id: 6, title: 'Reports', key: 'Reports', icon: '📈', description: 'View analytics and reports' },
+    { id: 7, title: 'Desk Panel', key: 'DeskPanel', icon: '🖥️', description: 'Access desk management tools' },
   ];
 
   // Filter menu options based on allowed screens
@@ -137,6 +135,9 @@ function App(): React.JSX.Element {
     switch (option.key) {
       case 'DeskPanel':
         setCurrentScreen('deskPanel');
+        break;
+      case 'Projects':
+        setCurrentScreen('projects');
         break;
       default:
         // TODO: navigate to other screens
@@ -290,6 +291,14 @@ function App(): React.JSX.Element {
   if (currentScreen === 'deskPanel') {
     return (
       <DeskPanelScreen
+        onNavigateBack={() => setCurrentScreen('main')}
+      />
+    );
+  }
+
+  if (currentScreen === 'projects') {
+    return (
+      <ProjectsScreen
         onNavigateBack={() => setCurrentScreen('main')}
       />
     );
