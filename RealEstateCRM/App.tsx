@@ -26,6 +26,9 @@ import SignUpScreen from './SignUpScreen';
 import SplashScreen from './SplashScreen';
 import DeskPanelScreen from './DeskPanelScreen';
 import ProjectsScreen from './ProjectsScreen';
+import ChatListScreen from './ChatListScreen';
+import ChatScreen from './ChatScreen';
+import VideoCallScreen from './VideoCallScreen';
 
 // Get screen dimensions
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -53,6 +56,9 @@ type MainStackParamList = {
   Home: undefined;
   DeskPanel: undefined;
   Projects: undefined;
+  ChatList: undefined;
+  Chat: { customerId?: string; customerName?: string };
+  VideoCall: { customerId?: string; customerName?: string };
 };
 
 type TabParamList = {
@@ -112,6 +118,9 @@ function MainNavigator({ onLogout }: { onLogout: () => Promise<void> }) {
       </MainStack.Screen>
       <MainStack.Screen name="DeskPanel" component={DeskPanelScreen} />
       <MainStack.Screen name="Projects" component={ProjectsScreen} />
+      <MainStack.Screen name="ChatList" component={ChatListScreen} />
+      <MainStack.Screen name="Chat" component={ChatScreen} />
+      <MainStack.Screen name="VideoCall" component={VideoCallScreen} />
     </MainStack.Navigator>
   );
 }
@@ -161,7 +170,7 @@ function TabNavigator({ onLogout }: { onLogout: () => Promise<void> }) {
       </Tab.Screen>
       <Tab.Screen 
         name="ChatTab" 
-        component={ChatScreen}
+        component={ChatListScreen}
         options={{ tabBarLabel: 'Chat' }}
       />
       <Tab.Screen 
@@ -336,8 +345,8 @@ function HomeScreen({ onLogout }: { onLogout: () => Promise<void> }) {
   );
 }
 
-// Chat Screen Component
-function ChatScreen() {
+// Chat Tab Screen Component
+function ChatTabScreen() {
   return (
     <View style={styles.tabContent}>
       <Text style={styles.tabTitle}>Chat</Text>
