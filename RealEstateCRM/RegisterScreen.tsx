@@ -8,25 +8,23 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 // Import logo
 import logo from './assets/images/Logo.png';
 
-interface RegisterScreenProps {
-  onNavigateToLogin: () => void;
-  onNavigateToSignUp: () => void;
-}
+function RegisterScreen(): React.JSX.Element {
+  const navigation = useNavigation();
 
-function RegisterScreen({ onNavigateToLogin, onNavigateToSignUp }: RegisterScreenProps): React.JSX.Element {
   const handleLogin = () => {
     console.log('Login pressed');
-    onNavigateToLogin();
+    navigation.navigate('Login');
   };
 
   const handleSignUp = () => {
     console.log('Sign Up pressed');
-    onNavigateToSignUp();
+    navigation.navigate('SignUp');
   };
 
   return (

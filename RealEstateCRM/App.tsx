@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  SafeAreaView,
   StyleSheet,
   Text,
   View,
@@ -10,10 +9,13 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
+import { NavigationContainer, useNavigation } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import 'react-native-gesture-handler';
 
 // Using Ionicons from react-native-vector-icons
-// Install with: npm install react-native-vector-icons
-// Then link fonts: npx react-native link react-native-vector-icons
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -25,11 +27,6 @@ import SplashScreen from './SplashScreen';
 import DeskPanelScreen from './DeskPanelScreen';
 import ProjectsScreen from './ProjectsScreen';
 
-// Remove the loadFont call as it's not needed in newer versions
-// Ionicons.loadFont();
-
-type Screen = 'splash' | 'login' | 'register' | 'signup' | 'main' | 'deskPanel' | 'projects';
-
 // Get screen dimensions
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -37,51 +34,163 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const isSmallDevice = screenWidth < 375;
 const isMediumDevice = screenWidth >= 375 && screenWidth < 768;
 const isLargeDevice = screenWidth >= 768;
+const isLargeScreen = screenHeight > 800; // 6.5 inches and above
 
-// Responsive scaling functions
-const scale = (size: number) => {
-  if (isSmallDevice) return size * 0.8;
-  if (isMediumDevice) return size;
-  return size * 1.2;
+// Navigation types
+type RootStackParamList = {
+  Splash: undefined;
+  Auth: undefined;
+  Main: undefined;
 };
 
-const scaleWidth = (size: number) => {
-  if (isSmallDevice) return size * 0.9;
-  if (isMediumDevice) return size;
-  return size * 1.1;
+type AuthStackParamList = {
+  Login: undefined;
+  Register: undefined;
+  SignUp: undefined;
 };
 
-const scaleHeight = (size: number) => {
-  if (isSmallDevice) return size * 0.9;
-  if (isMediumDevice) return size;
-  return size * 1.1;
+type MainStackParamList = {
+  Home: undefined;
+  DeskPanel: undefined;
+  Projects: undefined;
 };
 
-function App(): React.JSX.Element {
-  const [currentScreen, setCurrentScreen] = useState<Screen>('splash');
-  const [activeTab, setActiveTab] = useState<'home' | 'search' | 'chat' | 'settings'>('home');
-  const [iconsLoaded, setIconsLoaded] = useState(false);
-  const [allowedScreens, setAllowedScreens] = useState<string[]>([]);
+type TabParamList = {
+  HomeTab: undefined;
+  ChatTab: undefined;
+  SettingsTab: undefined;
+};
+
+const Stack = createStackNavigator<RootStackParamList>();
+const AuthStack = createStackNavigator<AuthStackParamList>();
+const MainStack = createStackNavigator<MainStackParamList>();
+const Tab = createBottomTabNavigator<TabParamList>();
+
+// Auth Navigator
+function AuthNavigator() {
+  return (
+    <AuthStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
+      }}
+    >
+      <AuthStack.Screen name="Register" component={RegisterScreen} />
+      <AuthStack.Screen name="Login" component={LoginScreen} />
+      <AuthStack.Screen name="SignUp" component={SignUpScreen} />
+    </AuthStack.Navigator>
+  );
+}
+
+// Main Stack Navigator
+function MainNavigator({ onLogout }: { onLogout: () => Promise<void> }) {
+  return (
+    <MainStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
+        cardStyleInterpolator: ({ current, layouts }) => {
+          return {
+            cardStyle: {
+              transform: [
+                {
+                  translateX: current.progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [layouts.screen.width, 0],
+                  }),
+                },
+              ],
+            },
+          };
+        },
+      }}
+    >
+      <MainStack.Screen name="Home">
+        {() => <TabNavigator onLogout={onLogout} />}
+      </MainStack.Screen>
+      <MainStack.Screen name="DeskPanel" component={DeskPanelScreen} />
+      <MainStack.Screen name="Projects" component={ProjectsScreen} />
+    </MainStack.Navigator>
+  );
+}
+
+// Tab Navigator
+function TabNavigator({ onLogout }: { onLogout: () => Promise<void> }) {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName: string;
+
+          if (route.name === 'HomeTab') {
+            iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'ChatTab') {
+            iconName = focused ? 'chatbubble' : 'chatbubble-outline';
+          } else if (route.name === 'SettingsTab') {
+            iconName = focused ? 'settings' : 'settings-outline';
+          } else {
+            iconName = 'home-outline';
+          }
+
+          return <Ionicons name={iconName as any} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: '#2c3e50',
+        tabBarInactiveTintColor: '#7f8c8d',
+        tabBarStyle: {
+          backgroundColor: '#ffffff',
+          borderTopWidth: 0.5,
+          borderTopColor: '#e0e0e0',
+          paddingTop: 8,
+          paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+          height: isLargeScreen ? 80 : 60,
+        },
+        tabBarLabelStyle: {
+          fontSize: isLargeScreen ? 12 : 10,
+          fontWeight: '500',
+        },
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen 
+        name="HomeTab" 
+        options={{ tabBarLabel: 'Home' }}
+      >
+        {() => <HomeScreen onLogout={onLogout} />}
+      </Tab.Screen>
+      <Tab.Screen 
+        name="ChatTab" 
+        component={ChatScreen}
+        options={{ tabBarLabel: 'Chat' }}
+      />
+      <Tab.Screen 
+        name="SettingsTab" 
+        component={SettingsScreen}
+        options={{ tabBarLabel: 'Settings' }}
+      />
+    </Tab.Navigator>
+  );
+}
+
+// Home Screen Component
+function HomeScreen({ onLogout }: { onLogout: () => Promise<void> }) {
+  const navigation = useNavigation();
   const [user, setUser] = useState<any>(null);
+  const [allowedScreens, setAllowedScreens] = useState<string[]>([]);
+  const [iconsLoaded, setIconsLoaded] = useState(false);
 
   useEffect(() => {
     // Check if icons are working
     try {
-      // Test if Ionicons is working
       const testIcon = Ionicons.getImageSource('home', 24, '#000');
       setIconsLoaded(true);
     } catch (error) {
       console.log('Icons not loaded properly:', error);
-      Alert.alert('Icons Issue', 'Vector icons are not properly configured. Please check the setup instructions.');
     }
+    
+    loadUserData();
   }, []);
-
-  // Load user data and allowed screens when main screen is shown
-  useEffect(() => {
-    if (currentScreen === 'main') {
-      loadUserData();
-    }
-  }, [currentScreen]);
 
   const loadUserData = async () => {
     try {
@@ -96,8 +205,6 @@ function App(): React.JSX.Element {
         const screens = JSON.parse(screensData);
         setAllowedScreens(screens);
         console.log('Loaded allowed screens:', screens);
-        console.log('Available menu options:', allMenuOptions.map(o => o.key));
-        console.log('Filtered menu options:', allMenuOptions.filter(option => screens.includes(option.key)).map(o => o.title));
       }
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -120,193 +227,52 @@ function App(): React.JSX.Element {
     allowedScreens.includes(option.key)
   );
 
-  // Ionicons names: 'home-outline', 'search-outline', 'person-outline' and filled variants
-  const bottomTabs = [
-    { id: 'home', icon: 'home-outline', activeIcon: 'home' },
-    // { id: 'search', icon: 'search-outline', activeIcon: 'search' },
-    { id: 'chat', icon: 'chatbubble-outline', activeIcon: 'chatbubble' },
-    { id: 'settings', icon: 'settings-outline', activeIcon: 'settings' },
-  ] as const;
-
   const handleMenuPress = (option: typeof menuOptions[number]) => {
     console.log(`Pressed: ${option.title}`);
     
     // Handle navigation based on menu option
     switch (option.key) {
       case 'DeskPanel':
-        setCurrentScreen('deskPanel');
+        (navigation as any).navigate('DeskPanel');
         break;
       case 'Projects':
-        setCurrentScreen('projects');
+        (navigation as any).navigate('Projects');
         break;
       default:
-        // TODO: navigate to other screens
         console.log(`Navigation to ${option.key} not implemented yet`);
     }
   };
 
-  const handleTabPress = (tabId: typeof bottomTabs[number]['id']) => {
-    setActiveTab(tabId);
-    console.log(`Switched to: ${tabId}`);
-    // TODO: navigate
-  };
-
-  const handleNavigateToLogin = () => {
-    setCurrentScreen('login');
-  };
-
-  const handleNavigateToRegister = () => {
-    setCurrentScreen('register');
-  };
-
-  const handleNavigateToSignUp = () => {
-    setCurrentScreen('signup');
-  };
-
-  const handleLoginSuccess = () => {
-    setCurrentScreen('main');
-  };
-
-  const handleRegisterSuccess = () => {
-    setCurrentScreen('main');
-  };
-
-  const handleSignUpSuccess = () => {
-    setCurrentScreen('main');
-  };
-
-  const handleSplashComplete = () => {
-    setCurrentScreen('register');
-  };
-
   const handleLogout = async () => {
-    try {
-      await AsyncStorage.removeItem('token');
-      await AsyncStorage.removeItem('user');
-      await AsyncStorage.removeItem('screens');
-      setAllowedScreens([]);
-      setUser(null);
-      setCurrentScreen('login');
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+    console.log('🔄 Logout button pressed');
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            console.log('🔄 User confirmed logout');
+            try {
+              console.log('🔄 Clearing local state...');
+              setAllowedScreens([]);
+              setUser(null);
+              console.log('🔄 Calling onLogout function...');
+              await onLogout();
+              console.log('🔄 Logout completed');
+            } catch (error) {
+              console.error('❌ Logout error:', error);
+            }
+          },
+        },
+      ]
+    );
   };
 
-  const renderContent = () => {
-    if (activeTab === 'home') {
-      return (
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {/* User info header */}
-          {user && (
-            <View style={styles.userInfo}>
-              <Text style={styles.welcomeText}>Welcome, {user.name}!</Text>
-              <Text style={styles.roleText}>Role: {user.role}</Text>
-            </View>
-          )}
-          
-          <View style={styles.menuGrid}>
-            {menuOptions.map(o => (
-              <TouchableOpacity
-                key={o.id}
-                style={styles.menuItem}
-                onPress={() => handleMenuPress(o)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.menuIcon}>{o.icon}</Text>
-                <Text style={styles.menuTitle}>{o.title}</Text>
-                <Text style={styles.menuDescription}>{o.description}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </ScrollView>
-      );
-    }
-
-    if (activeTab === 'search') {
-      return (
-        <View style={styles.tabContent}>
-          <Text style={styles.tabTitle}>Search Properties</Text>
-          <Text style={styles.tabSubtitle}>Find your perfect property</Text>
-        </View>
-      );
-    }
-
-    if (activeTab === 'chat') {
-      return (
-        <View style={styles.tabContent}>
-          <Text style={styles.tabTitle}>Chat</Text>
-          <Text style={styles.tabSubtitle}>Manage conversations</Text>
-        </View>
-      );
-    }
-
-    if (activeTab === 'settings') {
-      return (
-        <View style={styles.tabContent}>
-          <Text style={styles.tabTitle}>Settings</Text>
-          <Text style={styles.tabSubtitle}>Configure your preferences</Text>
-        </View>
-      );
-    }
-
-    return null;
-  };
-
-  // Render different screens based on current screen state
-  if (currentScreen === 'splash') {
-    return (
-      <SplashScreen
-        onSplashComplete={handleSplashComplete}
-      />
-    );
-  }
-
-  if (currentScreen === 'login') {
-    return (
-      <LoginScreen
-        onNavigateToRegister={handleNavigateToRegister}
-        onLoginSuccess={handleLoginSuccess}
-      />
-    );
-  }
-
-  if (currentScreen === 'register') {
-    return (
-      <RegisterScreen
-        onNavigateToLogin={handleNavigateToLogin}
-        onNavigateToSignUp={handleNavigateToSignUp}
-      />
-    );
-  }
-
-  if (currentScreen === 'signup') {
-    return (
-      <SignUpScreen
-        onNavigateToLogin={handleNavigateToLogin}
-        onSignUpSuccess={handleSignUpSuccess}
-      />
-    );
-  }
-
-  if (currentScreen === 'deskPanel') {
-    return (
-      <DeskPanelScreen
-        onNavigateBack={() => setCurrentScreen('main')}
-      />
-    );
-  }
-
-  if (currentScreen === 'projects') {
-    return (
-      <ProjectsScreen
-        onNavigateBack={() => setCurrentScreen('main')}
-      />
-    );
-  }
-
-  // Main app screen
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <TouchableOpacity style={styles.headerIcon} onPress={() => console.log('Dashboard pressed')}>
@@ -342,31 +308,124 @@ function App(): React.JSX.Element {
         </View>
       </View>
 
-      {renderContent()}
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* User info header */}
+        {user && (
+          <View style={styles.userInfo}>
+            <Text style={styles.welcomeText}>Welcome, {user.name}!</Text>
+            <Text style={styles.roleText}>Role: {user.role}</Text>
+          </View>
+        )}
+        
+        <View style={styles.menuGrid}>
+          {menuOptions.map(o => (
+            <TouchableOpacity
+              key={o.id}
+              style={styles.menuItem}
+              onPress={() => handleMenuPress(o)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.menuIcon}>{o.icon}</Text>
+              <Text style={styles.menuTitle}>{o.title}</Text>
+              <Text style={styles.menuDescription}>{o.description}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
 
-      <View style={styles.bottomNav}>
-        {bottomTabs.map(({ id, icon, activeIcon }) => (
-          <TouchableOpacity
-            key={id}
-            style={styles.tabItem}
-            onPress={() => handleTabPress(id)}
-            activeOpacity={0.7}
-          >
-            {iconsLoaded ? (
-              <Ionicons
-                name={activeTab === id ? activeIcon : icon}
-                size={24}
-                color={activeTab === id ? '#2c3e50' : '#7f8c8d'}
-              />
-            ) : (
-              <Text style={[styles.fallbackIcon, { color: activeTab === id ? '#2c3e50' : '#7f8c8d' }]}>
-                {activeTab === id ? '●' : '○'}
-              </Text>
-            )}
-          </TouchableOpacity>
-        ))}
-      </View>
-    </SafeAreaView>
+// Chat Screen Component
+function ChatScreen() {
+  return (
+    <View style={styles.tabContent}>
+      <Text style={styles.tabTitle}>Chat</Text>
+      <Text style={styles.tabSubtitle}>Manage conversations</Text>
+    </View>
+  );
+}
+
+// Settings Screen Component
+function SettingsScreen() {
+  return (
+    <View style={styles.tabContent}>
+      <Text style={styles.tabTitle}>Settings</Text>
+      <Text style={styles.tabSubtitle}>Configure your preferences</Text>
+    </View>
+  );
+}
+
+// Main App Component
+function App(): React.JSX.Element {
+  const [isLoading, setIsLoading] = useState(true);
+  const [initialRoute, setInitialRoute] = useState<'Splash' | 'Auth' | 'Main'>('Splash');
+  const navigationRef = useRef<any>(null);
+
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  const checkAuthStatus = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        setInitialRoute('Main');
+      } else {
+        setInitialRoute('Auth');
+      }
+    } catch (error) {
+      console.error('Error checking auth status:', error);
+      setInitialRoute('Auth');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    console.log('🔄 Main App handleLogout called');
+    try {
+      console.log('🔄 Clearing AsyncStorage...');
+      await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('user');
+      await AsyncStorage.removeItem('screens');
+      console.log('🔄 AsyncStorage cleared successfully');
+      
+      console.log('🔄 Navigating to Auth screen');
+      navigationRef.current?.reset({
+        index: 0,
+        routes: [{ name: 'Auth' }],
+      });
+      console.log('🔄 Navigation reset completed');
+    } catch (error) {
+      console.error('❌ Main App logout error:', error);
+    }
+  };
+
+  if (isLoading) {
+    return <SplashScreen onSplashComplete={() => setInitialRoute('Auth')} />;
+  }
+
+  return (
+    <SafeAreaProvider>
+      <NavigationContainer ref={navigationRef}>
+        <Stack.Navigator
+          initialRouteName={initialRoute}
+          screenOptions={{
+            headerShown: false,
+            gestureEnabled: true,
+          }}
+        >
+          <Stack.Screen name="Splash">
+            {() => <SplashScreen onSplashComplete={() => setInitialRoute('Auth')} />}
+          </Stack.Screen>
+          <Stack.Screen name="Auth" component={AuthNavigator} />
+          <Stack.Screen name="Main">
+            {() => <MainNavigator onLogout={handleLogout} />}
+          </Stack.Screen>
+        </Stack.Navigator>
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 }
 
@@ -379,7 +438,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#ffffff',
     paddingTop: Platform.OS === 'ios' ? 44 : 24,
-    paddingBottom: 12,
+    paddingBottom: isLargeScreen ? 16 : 12,
     paddingHorizontal: 16,
     borderBottomWidth: 0.5,
     borderBottomColor: '#e0e0e0',
@@ -404,20 +463,21 @@ const styles = StyleSheet.create({
   },
   headerIcon: {
     padding: 8,
-    minWidth: 44,
+    minWidth: isLargeScreen ? 48 : 44,
+    minHeight: isLargeScreen ? 48 : 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
   content: { 
     flex: 1, 
-    padding: scale(20),
+    padding: isLargeScreen ? 24 : 20,
     width: '100%',
   },
   userInfo: {
     backgroundColor: '#ffffff',
-    padding: scale(15),
-    borderRadius: scale(10),
-    marginBottom: scale(15),
+    padding: isLargeScreen ? 20 : 15,
+    borderRadius: isLargeScreen ? 12 : 10,
+    marginBottom: isLargeScreen ? 20 : 15,
     elevation: Platform.OS === 'android' ? 2 : 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -425,93 +485,73 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
   },
   welcomeText: {
-    fontSize: scale(18),
+    fontSize: isLargeScreen ? 20 : 18,
     fontWeight: 'bold',
     color: '#2c3e50',
-    marginBottom: scale(5),
+    marginBottom: isLargeScreen ? 8 : 5,
   },
   roleText: {
-    fontSize: scale(14),
+    fontSize: isLargeScreen ? 16 : 14,
     color: '#7f8c8d',
   },
   menuGrid: { 
     flexDirection: 'row', 
     flexWrap: 'wrap', 
     justifyContent: 'space-between', 
-    paddingTop: scale(10),
+    paddingTop: isLargeScreen ? 12 : 10,
     width: '100%',
   },
   menuItem: {
     backgroundColor: '#ffffff',
     width: '48%',
-    padding: scale(20),
-    borderRadius: scale(15),
-    marginBottom: scale(15),
+    padding: isLargeScreen ? 24 : 20,
+    borderRadius: isLargeScreen ? 18 : 15,
+    marginBottom: isLargeScreen ? 20 : 15,
     alignItems: 'center',
     elevation: Platform.OS === 'android' ? 3 : 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
-    minHeight: scale(120),
+    minHeight: isLargeScreen ? 140 : 120,
     justifyContent: 'center',
   },
   menuIcon: { 
-    fontSize: scale(32), 
-    marginBottom: scale(10) 
+    fontSize: isLargeScreen ? 36 : 32, 
+    marginBottom: isLargeScreen ? 12 : 10 
   },
   menuTitle: { 
-    fontSize: scale(16), 
+    fontSize: isLargeScreen ? 18 : 16, 
     fontWeight: 'bold', 
     color: '#2c3e50', 
-    marginBottom: scale(5), 
+    marginBottom: isLargeScreen ? 6 : 5, 
     textAlign: 'center' 
   },
   menuDescription: { 
-    fontSize: scale(12), 
+    fontSize: isLargeScreen ? 14 : 12, 
     color: '#7f8c8d', 
     textAlign: 'center', 
-    lineHeight: scale(16) 
+    lineHeight: isLargeScreen ? 18 : 16 
   },
   tabContent: { 
     flex: 1, 
     justifyContent: 'center', 
     alignItems: 'center', 
-    padding: scale(20) 
+    padding: isLargeScreen ? 24 : 20 
   },
   tabTitle: { 
-    fontSize: scale(24), 
+    fontSize: isLargeScreen ? 28 : 24, 
     fontWeight: 'bold', 
     color: '#2c3e50', 
-    marginBottom: scale(10) 
+    marginBottom: isLargeScreen ? 12 : 10 
   },
   tabSubtitle: { 
-    fontSize: scale(16), 
+    fontSize: isLargeScreen ? 18 : 16, 
     color: '#7f8c8d', 
     textAlign: 'center' 
   },
-  bottomNav: {
-    flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    paddingTop: 8,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
-    paddingHorizontal: 20,
-    borderTopWidth: 0.5,
-    borderTopColor: '#e0e0e0',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    width: '100%',
-    minHeight: 60,
-  },
-  tabItem: { 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    paddingVertical: 8, 
-    paddingHorizontal: 16,
-    minWidth: 60,
-  },
   fallbackIcon: { 
-    fontSize: scale(20), 
+    fontSize: isLargeScreen ? 22 : 20, 
     fontWeight: 'bold' 
   },
 });

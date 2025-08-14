@@ -10,7 +10,9 @@ import {
   Alert,
   ActivityIndicator,
   Dimensions,
+  StatusBar,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { buildApiUrl, API_CONFIG } from './config/api';
 
@@ -26,11 +28,8 @@ interface SiteVisit {
   createdAt: string;
 }
 
-interface DeskPanelScreenProps {
-  onNavigateBack: () => void;
-}
-
-function DeskPanelScreen({ onNavigateBack }: DeskPanelScreenProps): React.JSX.Element {
+function DeskPanelScreen(): React.JSX.Element {
+  const navigation = useNavigation();
   const [siteVisits, setSiteVisits] = useState<SiteVisit[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -259,9 +258,11 @@ function DeskPanelScreen({ onNavigateBack }: DeskPanelScreenProps): React.JSX.El
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={onNavigateBack}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="#2c3e50" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Desk Panel</Text>
@@ -292,7 +293,7 @@ function DeskPanelScreen({ onNavigateBack }: DeskPanelScreenProps): React.JSX.El
 
       {/* Filters */}
       <View style={styles.filtersContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersScrollContent}>
           <TouchableOpacity
             style={[styles.filterButton, filter === 'all' && styles.activeFilter]}
             onPress={() => setFilter('all')}
@@ -336,40 +337,44 @@ function DeskPanelScreen({ onNavigateBack }: DeskPanelScreenProps): React.JSX.El
       </View>
 
       {/* Content */}
-      <ScrollView
-        style={styles.content}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        showsVerticalScrollIndicator={false}
-      >
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#FADB43" />
-            <Text style={styles.loadingText}>Loading site visits...</Text>
-          </View>
-        ) : filteredVisits.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="calendar-outline" size={64} color="#bdc3c7" />
-            <Text style={styles.emptyTitle}>No Site Visits</Text>
-            <Text style={styles.emptyText}>
-              {filter === 'all' 
-                ? 'No site visits found. Add some visits to get started!'
-                : `No ${filter} visits found.`
-              }
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.visitsList}>
-            {filteredVisits.map(renderVisitCard)}
-          </View>
-        )}
-      </ScrollView>
+      <View style={styles.contentContainer}>
+        <ScrollView
+          style={styles.content}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.contentScrollContainer}
+        >
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#FADB43" />
+              <Text style={styles.loadingText}>Loading site visits...</Text>
+            </View>
+          ) : filteredVisits.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="calendar-outline" size={64} color="#bdc3c7" />
+              <Text style={styles.emptyTitle}>No Site Visits</Text>
+              <Text style={styles.emptyText}>
+                {filter === 'all' 
+                  ? 'No site visits found. Add some visits to get started!'
+                  : `No ${filter} visits found.`
+                }
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.visitsList}>
+              {filteredVisits.map(renderVisitCard)}
+            </View>
+          )}
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
+const isLargeScreen = height > 800; // 6.5 inches and above
 
 const styles = StyleSheet.create({
   container: {
@@ -381,64 +386,78 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: isLargeScreen ? 16 : 12,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    minHeight: isLargeScreen ? 70 : 60,
   },
   backButton: {
     padding: 8,
+    minWidth: 40,
+    minHeight: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: isLargeScreen ? 20 : 18,
     fontWeight: 'bold',
     color: '#2c3e50',
+    flex: 1,
+    textAlign: 'center',
   },
   refreshButton: {
     padding: 8,
+    minWidth: 40,
+    minHeight: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   statsContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: isLargeScreen ? 16 : 12,
     backgroundColor: '#ffffff',
     marginBottom: 8,
   },
   statCard: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: isLargeScreen ? 16 : 12,
   },
   statNumber: {
-    fontSize: 24,
+    fontSize: isLargeScreen ? 28 : 24,
     fontWeight: 'bold',
     color: '#2c3e50',
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: isLargeScreen ? 14 : 12,
     color: '#7f8c8d',
     marginTop: 4,
   },
   filtersContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
     backgroundColor: '#ffffff',
     marginBottom: 8,
+    paddingVertical: isLargeScreen ? 16 : 12,
+  },
+  filtersScrollContent: {
+    paddingHorizontal: 16,
+    paddingBottom: isLargeScreen ? 12 : 8,
   },
   filterButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: isLargeScreen ? 20 : 16,
+    paddingVertical: isLargeScreen ? 10 : 8,
     borderRadius: 20,
     marginRight: 8,
     backgroundColor: '#f1f2f6',
+    minHeight: isLargeScreen ? 44 : 36,
+    justifyContent: 'center',
   },
   activeFilter: {
     backgroundColor: '#FADB43',
   },
   filterText: {
-    fontSize: 14,
+    fontSize: isLargeScreen ? 16 : 14,
     color: '#7f8c8d',
   },
   activeFilterText: {
@@ -448,45 +467,57 @@ const styles = StyleSheet.create({
   sortButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: isLargeScreen ? 16 : 12,
+    paddingVertical: isLargeScreen ? 10 : 8,
     backgroundColor: '#f1f2f6',
     borderRadius: 20,
+    marginHorizontal: 16,
+    marginTop: isLargeScreen ? 8 : 4,
+    minHeight: isLargeScreen ? 44 : 36,
+    justifyContent: 'center',
   },
   sortText: {
-    fontSize: 12,
+    fontSize: isLargeScreen ? 14 : 12,
     color: '#2c3e50',
     marginLeft: 4,
   },
+  contentContainer: {
+    flex: 1,
+  },
   content: {
     flex: 1,
+  },
+  contentScrollContainer: {
     paddingHorizontal: 16,
+    paddingBottom: 20,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: isLargeScreen ? 80 : 40,
+    minHeight: height * 0.4,
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 16,
+    fontSize: isLargeScreen ? 18 : 16,
     color: '#7f8c8d',
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 60,
+    paddingVertical: isLargeScreen ? 100 : 60,
+    minHeight: height * 0.5,
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: isLargeScreen ? 24 : 20,
     fontWeight: 'bold',
     color: '#2c3e50',
     marginTop: 16,
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: isLargeScreen ? 16 : 14,
     color: '#7f8c8d',
     textAlign: 'center',
     marginTop: 8,
@@ -498,8 +529,8 @@ const styles = StyleSheet.create({
   visitCard: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    padding: isLargeScreen ? 20 : 16,
+    marginBottom: isLargeScreen ? 16 : 12,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -510,28 +541,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: isLargeScreen ? 16 : 12,
   },
   nameSection: {
     flex: 1,
   },
   visitName: {
-    fontSize: 16,
+    fontSize: isLargeScreen ? 18 : 16,
     fontWeight: 'bold',
     color: '#2c3e50',
     marginBottom: 2,
   },
   visitPhone: {
-    fontSize: 14,
+    fontSize: isLargeScreen ? 16 : 14,
     color: '#7f8c8d',
   },
   statusSection: {
     marginLeft: 8,
   },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: isLargeScreen ? 14 : 12,
+    paddingVertical: isLargeScreen ? 8 : 6,
     borderRadius: 12,
+    minHeight: isLargeScreen ? 36 : 32,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scheduledBadge: {
     backgroundColor: '#d4edda',
@@ -540,19 +574,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff3cd',
   },
   statusText: {
-    fontSize: 12,
+    fontSize: isLargeScreen ? 14 : 12,
     fontWeight: 'bold',
   },
   cardDetails: {
-    marginBottom: 12,
+    marginBottom: isLargeScreen ? 16 : 12,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: isLargeScreen ? 8 : 6,
   },
   detailText: {
-    fontSize: 14,
+    fontSize: isLargeScreen ? 16 : 14,
     color: '#2c3e50',
     marginLeft: 8,
     flex: 1,
@@ -562,20 +596,22 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     borderTopWidth: 1,
     borderTopColor: '#f1f2f6',
-    paddingTop: 12,
+    paddingTop: isLargeScreen ? 16 : 12,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: isLargeScreen ? 16 : 12,
+    paddingVertical: isLargeScreen ? 8 : 6,
     marginLeft: 8,
+    minHeight: isLargeScreen ? 44 : 36,
+    justifyContent: 'center',
   },
   deleteButton: {
     // Additional styling if needed
   },
   actionText: {
-    fontSize: 12,
+    fontSize: isLargeScreen ? 14 : 12,
     color: '#FADB43',
     marginLeft: 4,
     fontWeight: 'bold',
@@ -587,13 +623,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#27ae60',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: isLargeScreen ? 20 : 16,
+    paddingVertical: isLargeScreen ? 10 : 8,
     borderRadius: 20,
     marginRight: 8,
+    minHeight: isLargeScreen ? 44 : 36,
+    justifyContent: 'center',
   },
   scheduleButtonText: {
-    fontSize: 12,
+    fontSize: isLargeScreen ? 14 : 12,
     color: '#ffffff',
     marginLeft: 4,
     fontWeight: 'bold',

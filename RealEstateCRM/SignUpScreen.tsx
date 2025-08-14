@@ -10,6 +10,7 @@ import {
   Image,
   Alert,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { buildApiUrl, API_CONFIG } from './config/api';
@@ -17,12 +18,8 @@ import { buildApiUrl, API_CONFIG } from './config/api';
 // Import logo
 import logo from './assets/images/Logo.png';
 
-interface SignUpScreenProps {
-  onNavigateToLogin: () => void;
-  onSignUpSuccess: () => void;
-}
-
-function SignUpScreen({ onNavigateToLogin, onSignUpSuccess }: SignUpScreenProps): React.JSX.Element {
+function SignUpScreen(): React.JSX.Element {
+  const navigation = useNavigation();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -70,7 +67,12 @@ function SignUpScreen({ onNavigateToLogin, onSignUpSuccess }: SignUpScreenProps)
         await AsyncStorage.setItem('screens', JSON.stringify(data.user.screens || []));
         
         console.log('Sign up successful');
-        onSignUpSuccess();
+        
+        // Navigate to main screen
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Main' as never }],
+        });
       } else {
         console.log('Sign up failed:', data.error);
         Alert.alert('Sign Up Failed', data.error || 'Registration failed');
@@ -160,7 +162,7 @@ function SignUpScreen({ onNavigateToLogin, onSignUpSuccess }: SignUpScreenProps)
         {/* Login Link */}
         <View style={styles.loginContainer}>
           <Text style={styles.loginText}>Already have an account? </Text>
-          <TouchableOpacity onPress={onNavigateToLogin}>
+          <TouchableOpacity onPress={() => navigation.navigate('Login' as never)}>
             <Text style={styles.loginLink}>Log In</Text>
           </TouchableOpacity>
         </View>

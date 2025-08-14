@@ -10,6 +10,7 @@ import {
   Image,
   Alert,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { buildApiUrl, API_CONFIG } from './config/api';
@@ -17,12 +18,8 @@ import { buildApiUrl, API_CONFIG } from './config/api';
 // Import logo
 import logo from './assets/images/Logo.png';
 
-interface LoginScreenProps {
-  onNavigateToRegister: () => void;
-  onLoginSuccess: () => void;
-}
-
-function LoginScreen({ onNavigateToRegister, onLoginSuccess }: LoginScreenProps): React.JSX.Element {
+function LoginScreen(): React.JSX.Element {
+  const navigation = useNavigation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -58,7 +55,12 @@ function LoginScreen({ onNavigateToRegister, onLoginSuccess }: LoginScreenProps)
         
         console.log('Login successful, saved screens:', data.user.screens);
         console.log('Full user data:', data.user);
-        onLoginSuccess();
+        
+        // Navigate to main screen
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Main' as never }],
+        });
       } else {
         console.log('Login failed:', data.error);
         Alert.alert('Login Failed', data.error || 'Invalid credentials');
@@ -148,7 +150,7 @@ function LoginScreen({ onNavigateToRegister, onLoginSuccess }: LoginScreenProps)
         {/* Register Link */}
         <View style={styles.registerContainer}>
           <Text style={styles.registerText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={onNavigateToRegister}>
+          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
             <Text style={styles.registerLink}>Register</Text>
           </TouchableOpacity>
         </View>
